@@ -1,11 +1,32 @@
 import { IBook } from './book.interface';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
+@Entity()
 export class Book implements IBook {
-    id: number;
-    title: string;
-    author: string;
-    isbn: string;
-    publishAt: Date;
-    createdAt: Date;
-    updatedAt: Date;
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column('text')
+  title: string;
+
+  @Column('text')
+  author: string;
+
+  @Column({ length: 13 })
+  isbn: string;
+
+  @Column()
+  publishAt: Date;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
