@@ -24,6 +24,9 @@ export class Book implements IBook {
   @Column()
   publishAt: Date;
 
+  @Column('text', { default: '', nullable: true })
+  description: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

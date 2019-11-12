@@ -245,6 +245,113 @@ export class BookService {
 自分でカスタマイズもできそう
 https://docs.nestjs.com/techniques/database#custom-repository
 
+### DBマイグレーション
+
+ローカルのdockerにpostgresqlを用意して、そこにDBを作ってみる
+
+```
+create database practice-nestjs
+```
+
+`DBeaver`で作った。これもCLIからできると最高なんだが...
+
+#### マイグレーションファイルを作る
+
+これがドンピシャな内容、これに沿ってやる
+https://github.com/ambroiseRabier/typeorm-nestjs-migration-example
+
+接続情報を`ormconfig`に移す。
+何でかと言うと、マイグレーションファイルは`typeorm`のコマンドを直接叩くので、その際にこのファイルを渡してあげる
+
+```ts
+import { ConnectionOptions } from 'typeorm';
+import { Book } from './book/book'
+
+const config: ConnectionOptions = {
+  type: 'postgres',
+  host: 'localhost',
+  port: 5432,
+  username: 'postgres',
+  password: 'posgre',
+  database: 'practice-nestjs',
+  entities: [Book],
+  synchronize: false,
+  migrationsRun: true,
+  logging: true,
+  logger: 'file',
+  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  cli: {
+    migrationsDir: 'src/migrations',
+  },
+};
+
+export = config;
+```
+
+app.module.tsも直す
+
+```ts
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BookModule } from './book/book.module';
+import * as ormconfig from './ormconfig';
+
+@Module({
+  imports: [
+    TypeOrmModule.forRoot(ormconfig),
+    BookModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+`package.json`のscriptsに以下を追加
+
+```json
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --config src/ormconfig.ts",
+    "typeorm:migrate": "npm run typeorm migration:generate -- -n",
+    "typeorm:run": "npm run typeorm migration:run"
+```
+
+`typeorm`は初回に一度だけ実行すれば良い（たぶん）
+`typeorm:migrate hogehoge`でマイグレーションファイルを作成する。
+`typeorm:run`で作成したマイグレーションファイルでマイグレーションを実行する。
+
+なので早速`typeorm:migrate`をやってみたが、結果、空のマイグレーションファイルができてしまう。
+しかし翌日再実行してみたら、ちゃんと`CREATE TABLE~~~`と中身が入ったファイルができた。なんでや。
+
+#### マイグレーション実行
+
+`typeorm:run`でマイグレーションを実行。ちゃんとテーブルができた！
+
+併せて`book.controller.ts`でサービスからデータを呼び出すように修正する。
+
+```ts
+import { Controller, Get } from '@nestjs/common';
+import { IBook } from './book.interface'
+import { BookService } from './book.service'
+
+@Controller('books')
+export class BookController {
+  constructor(private readonly bookService: BookService) {}
+
+  @Get()
+  findAll(): Promise<IBook[]> {
+    return this.bookService.findAll();
+  }
+}
+```
+
+これで https://localhost:3000/books にアクセスすると、DBの内容が表示された！
+
+## helmet
+
+https://www.kennejs.com/entry/2019/01/12/002142
+
 # Reference
 
 - https://docs.nestjs.com
